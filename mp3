@@ -1,28 +1,24 @@
 ---
-title: "mp3"
-author: "Irene Xu"
-date: "4/6/2019"
+title: "Mini Project 3: Spatial Data"
+author: "Irene Xu, Junru Wu, & Sarah Wu"
+date: "4/16/2019"
 output: 
   html_document:
     code_folding: hide
 ---
+#### We came up with a system of rating the difficulty of existing trails in Macleish (#1)
 
-```{r}
+#### 1. Loading packages
+```{r message = FALSE, warning = FALSE}
 library(tidyverse)
 library(sf)
 library(macleish)
 library(leaflet)
 library(ggplot2)
-leaflet() %>%
-  addTiles() %>%
-  addPolygons(data = macleish_layers[["boundary"]], 
-              weight = 1, fillOpacity = 0.1) %>%
-  addPolylines(data = macleish_layers[["trails"]], 
-               weight = 1, color = "brown",
-               popup = ~ name) %>%
-  addPolylines(data = macleish_layers[["streams"]], 
-               weight = 2)
+```
 
+#### 2. Transform data type & coordination system
+```{r message = FALSE, warning = FALSE}
 macleish_layers_pt <- st_intersection(
   pluck(macleish_layers, "trails"), 
   pluck(macleish_layers, "contours_3m")) %>% 
@@ -31,9 +27,9 @@ macleish_layers_pt <- st_intersection(
 
 macleish_sf <- st_as_sf(macleish_layers_pt, coords = c("longitude", "latitude"), crs = 4326)
 ```
-Shenandoah's Hiking Difficulty
-https://www.nps.gov/shen/planyourvisit/how-to-determine-hiking-difficulty.htm
-```{r}
+
+#### 3. Visualize the existing trails in Macleish
+```{r message = FALSE, warning = FALSE}
 leaflet() %>%
   addTiles() %>%
   addPolygons(data = macleish_layers[["boundary"]], 
@@ -43,61 +39,45 @@ leaflet() %>%
                popup = ~ name) %>%
   addPolylines(data = macleish_layers[["contours_3m"]], 
                weight = 1, color = "red") %>%
-  addMarkers(data = macleish_sf, popup = ~as.character(geometry), label = ~as.character(ELEV_M))
+  addMarkers(data = macleish_sf, label = ~as.character(ELEV_M))
 ```
 
-```{r}
+#### 4. Rationale of our classification system of trail difficulty
+?????????????
+
+* Shenandoah's Hiking Difficulty
+https://www.nps.gov/shen/planyourvisit/how-to-determine-hiking-difficulty.htm
+* Other existing sources on hiking difficulties
+* Advice from Paul: rather than easy - change it to grandma/children/teens
+* Final decision
+
+#### 5. Determine the equation that calculates overall difficulty
+$\hat{Difficulty} = Distance * sd(Elevation)$
+
+#### 6. Add a variable that calculates the total length of each trail
+```{r message = FALSE, warning = FALSE}
 trails <- macleish_layers %>%
   pluck("trails") %>%
   mutate(computed_length = st_length(geometry)) %>%
   group_by(name) %>%
   summarize(total_length = sum(computed_length))
+```
 
-# Calculate the standard deviation of elevation for each trail, which represents the rate of change in  elevation
-
+#### 7. Add a variable that alculates the standard deviation of elevation for each trail, which represents the rate of change in elevation.
+```{r message = FALSE, warning = FALSE}
 macleish_sf <- macleish_sf %>%
   group_by(name) %>%
   mutate(std.dev = sd(ELEV_M)) %>%
-  arrange(desc(std.dev))
-```
-```{r}
-calculate_diff <- function(name) {
-  trails %>%
-    mutate(difficulty = total_length*)
-}
-```
-
-#determine the formula that calculates difficulty
-distance * sd(elevation) * 2  
-
-#calculate the total length opf each trail
-```{r}
-trails <- macleish_layers %>%
-  pluck("trails") %>%
-  mutate(computed_length = st_length(geometry)) %>%
-  group_by(name) %>%
-  summarize(total_length = sum(computed_length))
-```
-
-#calculate the standard deviation of elevation for each trail, which represents the rate of change in  elevation
-```{r}
-macleish_sf <- st_as_sf(macleish_layers_pt, coords = c("longitude", "latitude"), crs = 4326) %>%
-  group_by(name) %>%
-  mutate(std.dev=sd(ELEV_M))
-```
-
-```{r}
-trails_2 <- macleish_sf %>%
   select(name, std.dev) %>%
   group_by(name) %>%
   summarize(std.dev = mean(std.dev))
 ```
 
-#convert trails and trails_2 from sf into data frames and join them into one final data frame
-```{r}
+#### 8. Convert trails and macleish_sf from sf into data frames and join them into one final data frame
+```{r message = FALSE, warning = FALSE}
 measures <- data.frame(trails) %>%
-  inner_join(data.frame(trails_2), by = "name") %>%
+  inner_join(data.frame(macleish_sf), by = "name") %>%
   select(-geometry.x, -geometry.y) %>%
   mutate(difficulty = (total_length/100) * std.dev)
+measures
 ```
-
