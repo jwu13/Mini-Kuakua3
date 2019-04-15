@@ -81,3 +81,9 @@ measures <- data.frame(trails) %>%
   mutate(difficulty = (total_length/100) * std.dev)
 measures
 ```
+
+#### Interpretation
+
+
+
+#### Discussion
