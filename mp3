@@ -67,3 +67,37 @@ calculate_diff <- function(name) {
 }
 ```
 
+#determine the formula that calculates difficulty
+distance * sd(elevation) * 2  
+
+#calculate the total length opf each trail
+```{r}
+trails <- macleish_layers %>%
+  pluck("trails") %>%
+  mutate(computed_length = st_length(geometry)) %>%
+  group_by(name) %>%
+  summarize(total_length = sum(computed_length))
+```
+
+#calculate the standard deviation of elevation for each trail, which represents the rate of change in  elevation
+```{r}
+macleish_sf <- st_as_sf(macleish_layers_pt, coords = c("longitude", "latitude"), crs = 4326) %>%
+  group_by(name) %>%
+  mutate(std.dev=sd(ELEV_M))
+```
+
+```{r}
+trails_2 <- macleish_sf %>%
+  select(name, std.dev) %>%
+  group_by(name) %>%
+  summarize(std.dev = mean(std.dev))
+```
+
+#convert trails and trails_2 from sf into data frames and join them into one final data frame
+```{r}
+measures <- data.frame(trails) %>%
+  inner_join(data.frame(trails_2), by = "name") %>%
+  select(-geometry.x, -geometry.y) %>%
+  mutate(difficulty = (total_length/100) * std.dev)
+```
+
