@@ -1,0 +1,69 @@
+---
+title: "mp3"
+author: "Irene Xu"
+date: "4/6/2019"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r}
+library(tidyverse)
+library(sf)
+library(macleish)
+library(leaflet)
+library(ggplot2)
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = macleish_layers[["boundary"]], 
+              weight = 1, fillOpacity = 0.1) %>%
+  addPolylines(data = macleish_layers[["trails"]], 
+               weight = 1, color = "brown",
+               popup = ~ name) %>%
+  addPolylines(data = macleish_layers[["streams"]], 
+               weight = 2)
+
+macleish_layers_pt <- st_intersection(
+  pluck(macleish_layers, "trails"), 
+  pluck(macleish_layers, "contours_3m")) %>% 
+  st_cast("MULTIPOINT") %>% 
+  st_cast("POINT")
+
+macleish_sf <- st_as_sf(macleish_layers_pt, coords = c("longitude", "latitude"), crs = 4326)
+```
+Shenandoah's Hiking Difficulty
+https://www.nps.gov/shen/planyourvisit/how-to-determine-hiking-difficulty.htm
+```{r}
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = macleish_layers[["boundary"]], 
+              weight = 1, fillOpacity = 0.1) %>%
+  addPolylines(data = macleish_layers[["trails"]], 
+               weight = 5, color = "black",
+               popup = ~ name) %>%
+  addPolylines(data = macleish_layers[["contours_3m"]], 
+               weight = 1, color = "red") %>%
+  addMarkers(data = macleish_sf, popup = ~as.character(geometry), label = ~as.character(ELEV_M))
+```
+
+```{r}
+trails <- macleish_layers %>%
+  pluck("trails") %>%
+  mutate(computed_length = st_length(geometry)) %>%
+  group_by(name) %>%
+  summarize(total_length = sum(computed_length))
+
+# Calculate the standard deviation of elevation for each trail, which represents the rate of change in  elevation
+
+macleish_sf <- macleish_sf %>%
+  group_by(name) %>%
+  mutate(std.dev = sd(ELEV_M)) %>%
+  arrange(desc(std.dev))
+```
+```{r}
+calculate_diff <- function(name) {
+  trails %>%
+    mutate(difficulty = total_length*)
+}
+```
+
