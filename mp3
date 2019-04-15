@@ -1,12 +1,14 @@
 ---
-title: "Mini Project 3: Spatial Data"
+title: "Mini Project 3: CATCHY TITLE!!"
 author: "Irene Xu, Junru Wu, & Sarah Wu"
 date: "4/16/2019"
 output: 
   html_document:
     code_folding: hide
 ---
-#### We came up with a system of rating the difficulty of existing trails in Macleish (#1)
+#### We came up with a system of rating the difficulty of existing trails in [Macleish Field Station](https://www.smith.edu/about-smith/sustainable-smith/macleish), located in West Whately, MA (#1)
+
+![](https://www.smith.edu/sites/default/files/media/Documents/Sustainability/farmington-solar-project_0.jpg)
 
 #### 1. Loading packages
 ```{r message = FALSE, warning = FALSE}
@@ -28,7 +30,7 @@ macleish_layers_pt <- st_intersection(
 macleish_sf <- st_as_sf(macleish_layers_pt, coords = c("longitude", "latitude"), crs = 4326)
 ```
 
-#### 3. Visualize the existing trails in Macleish
+#### 3. Visualize the existing trails in Macleish, with labels representing the elevation in meter
 ```{r message = FALSE, warning = FALSE}
 leaflet() %>%
   addTiles() %>%
@@ -45,14 +47,13 @@ leaflet() %>%
 #### 4. Rationale of our classification system of trail difficulty
 ?????????????
 
-* Shenandoah's Hiking Difficulty
-https://www.nps.gov/shen/planyourvisit/how-to-determine-hiking-difficulty.htm
+* We found the emphasis on the length and change in elevation of the trail of the [Shenandoah's Hiking Difficulty](https://www.nps.gov/shen/planyourvisit/how-to-determine-hiking-difficulty.html) classification system plausible.  
 * Other existing sources on hiking difficulties
-* Advice from Paul: rather than easy - change it to grandma/children/teens
+* Advice from [Paul Wetzel](https://www.smith.edu/about-smith/sustainable-smith/campus-sustainability): rather than easy - change it to grandma/children/teens
 * Final decision
 
 #### 5. Determine the equation that calculates overall difficulty
-$\hat{Difficulty} = Distance * sd(Elevation)$
+$\hat{Difficulty} = Distance * sd(Elevation) * 2$  ?????????? WHY MULTIPLE BY 2???
 
 #### 6. Add a variable that calculates the total length of each trail
 ```{r message = FALSE, warning = FALSE}
@@ -82,8 +83,10 @@ measures <- data.frame(trails) %>%
 measures
 ```
 
-#### Interpretation
 
 
+> Word count: `r wordcountaddin::word_count()`
 
-#### Discussion
+^[[Github Repository](https://github.com/jwu13/Mini-Kuakua3)]
+
+^[* Data retrieved from package [macleish](https://github.com/beanumber/macleish)]
