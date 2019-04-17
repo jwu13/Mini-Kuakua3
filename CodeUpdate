@@ -1,0 +1,131 @@
+---
+title: "Which trail do you wanna hike?"
+author: "Irene Xu, Junru Wu, & Sarah Wu"
+date: "4/16/2019"
+output: 
+  html_document:
+    code_folding: hide
+---
+####   Problem Statement: 
+After visiting Macleish,we noticed that the current trails in MacLeish are classified according to their locations and therefore provides limited information for people to decide which trail to take. To assist hikers in choosing among various trails, we came up with a new system of rating the difficulty levels of existing trails in [Macleish Field Station](https://www.smith.edu/about-smith/sustainable-smith/macleish), located in West Whately, MA (#1)
+
+![](https://www.smith.edu/sites/default/files/media/Documents/Sustainability/farmington-solar-project_0.jpg)
+
+#### 1. Loading packages
+```{r message = FALSE, warning = FALSE}
+library(tidyverse)
+library(sf)
+library(macleish)
+library(leaflet)
+library(ggplot2)
+```
+
+#### 2. Transform data type & coordination system
+```{r message = FALSE, warning = FALSE}
+macleish_layers_pt <- st_intersection(
+  pluck(macleish_layers, "trails"), 
+  pluck(macleish_layers, "contours_3m")) %>% 
+  st_cast("MULTIPOINT") %>% 
+  st_cast("POINT")
+
+macleish_sf <- st_as_sf(macleish_layers_pt, coords = c("longitude", "latitude"), crs = 4326)
+```
+
+#### 3. Visualize the existing trails in Macleish, with labels representing the elevation in meter
+```{r message = FALSE, warning = FALSE}
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = macleish_layers[["boundary"]], 
+              weight = 1, fillOpacity = 0.1) %>%
+  addPolylines(data = macleish_layers[["trails"]], 
+               weight = 5, color = "black",
+               popup = ~ name) %>%
+  addPolylines(data = macleish_layers[["contours_3m"]], 
+               weight = 1, color = "red") %>%
+  addMarkers(data = macleish_sf, label = ~as.character(ELEV_M))
+```
+
+#### 4. Rationale of our classification system of trail difficulty
+
+#####Online Sources Consulted
+* We found the use  of length and change in elevation of the trail in the [Shenandoah's Hiking Difficulty](https://www.nps.gov/shen/planyourvisit/how-to-determine-hiking-difficulty.html) classification system reasonable 
+
+#####Other Sources Consulted
+* Advice from [Paul Wetzel](https://www.smith.edu/about-smith/sustainable-smith/campus-sustainability): rather than easy - change it to grandma/children/teens
+* After hiking every trail in Macleish, we found it is not the total change in elevation of a trail that makes a trail hard to hike. Rather, the quicker the elevation changes within a certain distance, the more time-consuming it is to hike. Moreover, the longer the trail, the more exhausting it is for hikers. 
+* We cdecide to the standard deviation of elevation to represent the variability in the changes of elevation.
+* We decide our final rationale of classification is based on the total length of the trail(total_length) and the variation in the changes of elevation(std.dev). Both factors are positively related to trail difficulty.
+
+#### 5. Determine the equation that calculates overall difficulty
+The mathemetical function we came up with in order to calculate the level of difficulty in hiking each trail is 
+
+$difficultyRate = (totalLength/100) * std.dev/539.061027*100$
+
+in which we multiplied the two factors (total lengths and variability in elevation) to show their combined influence and devided the product with its largest value 53906.1027 and scale by 100 to turn it into a score out of 100, with 100 indicating the most  difficult trail in our data set.
+
+#### 6. Add a variable that calculates the total length of each trail
+```{r message = FALSE, warning = FALSE}
+trails <- macleish_layers %>%
+  pluck("trails") %>%
+  mutate(computed_length = st_length(geometry)) %>%
+  group_by(name) %>%
+  summarize(total_length = sum(computed_length))
+```
+
+#### 7. Add a variable that alculates the standard deviation of elevation for each trail, which represents the rate of change in elevation.
+```{r message = FALSE, warning = FALSE}
+macleish_sf <- macleish_sf %>%
+  group_by(name) %>%
+  mutate(std.dev = sd(ELEV_M)) %>%
+  select(name, std.dev) %>%
+  group_by(name) %>%
+  summarize(std.dev = mean(std.dev))
+```
+
+#### 8. Convert trails and macleish_sf from sf into data frames and join them into one final data frame
+```{r message = FALSE, warning = FALSE}
+measures <- data.frame(trails) %>%
+  inner_join(data.frame(macleish_sf), by = "name") %>%
+  select(-geometry.x, -geometry.y) %>%
+  mutate(difficultyRate = (total_length) * std.dev/53906.1027*100)
+ 
+measures
+```
+
+#### 9. Interpretation of trail difficulty at Macleish according to our classification system of trail difficulty
+# Varsity Trail (The hardest trail: Long total length + high variation in elevation changes)
+Snowmobile Trail
+
+The trail is both long in distance and changes frequently in elevation. It is both time-consuming and exhausting to hike. Energetic people who are in good health condition, such as varsity team members, are most suitable for this trail. 
+
+## Camping Trails (Long total length + medium variation in elevation changes)
+Western Loop
+Eastern Loop
+Poplar Hill Road
+
+These trails are long in distances and but elevations of the trails do not change quickly. These trails take long time to hike but are not energy-consuming as elevations change slowly. Also, hikers are able to enjoy various sceneries along the road as trails are long in distances. People who want to have fun in Macleish but do not want a exhausting trip, such as camping beginners, are most suitable for these trails. 
+
+### Sweat Trail (Medium total length + high variation in elevation changes)
+Porcupine Trail
+
+Thes trail is medium in terms of length and but its elevation changes quickly. Finishing this trail will not be time-consuming. However, it may be exhausting to hike as the elevation changes quickly. People who want a quick work-out are most suitable to hike this trail.
+
+#### Grandma Trails (The easiest trails: short total length + low variation in elevation changes)
+Vernal Pool Loop
+entry trail
+Easy Out 
+Driveway
+
+These trails are both short in distances and elevation of the trrails change slowly. These trails are relaxing to hike. People who are in relatively weak health conditions are most suitable to hike this trail.
+
+#### 10. Our Actionable Recommendations for Smith : 
+        We recommend Smith to provide additional posters or brochures at the entry of MacLeish to explain the difficulty of each trail using our explanations of each trail, \ classifications of trail difficulty, and our recommendations of hiking trails for different groups of hikers. These additional info will provide hikers who are new to MacLeish a general sense of the characteristic of each trail. Therefore, hikers can be better informed and make better decisions to choose the trial that is the most suitable for them.
+
+#### 11. Estimated cost for Smith :
+      Implementing our suggested plan is not very costly and will bring immediate improvement to hikers' experience. Smith would only need to print out some materials, which is relatively cheap  and quick. There is no potential environmental impact nor major roadblocks. 
+
+> Word count: `r wordcountaddin::word_count()`
+
+^[[Github Repository](https://github.com/jwu13/Mini-Kuakua3)]
+
+^[* Data retrieved from package [macleish](https://github.com/beanumber/macleish)]
